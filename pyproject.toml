@@ -1,0 +1,15 @@
+[project]
+name = "subpixel"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "Pillow>=10.0",
+    "cryptography>=42.0",
+]
+
+[project.scripts]
+palimpsest = "subpixel.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
