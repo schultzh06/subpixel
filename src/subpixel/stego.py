@@ -1,19 +1,47 @@
 from PIL import Image
 from typing import Iterator
 from itertools import chain
+from pathlib import Path
+
+FIXTURES = Path(__file__).resolve().parents[1] / "tests" / "fixtures"
 
 LENGTH_HEADER_BYTES = 4 # payload length as 4-byte big-endian int
 
 def bytes_to_bits(data: bytes) -> Iterator[int]:
+    """Yield each bit of each byte, most-significant bit first.
+
+    MSB-first is a protocol choice, not a requirement: bits_to_bytes
+    must reassemble in the same order.
+    """
     for byte in data:
         for i in range(7,-1,-1):
             yield (byte >> i) & 1
 
+def bits_to_bytes(bits: Iterator[int], count: int) -> bytes:
+    """Return constructed bytes given iterator bits collection
 
-def bits_to_bytes(bits) -> bytes:
-    pass
+    Length of bytes must be provided, will not process header
+    """
+    out = bytearray()
+    for _ in range(count):
+        byte = 0x0
+        for _ in range(8):
+            byte = (byte << 1) | next(bits)
+        out.append(byte)
+    return bytes(out)
+        
+
 
 def embed(cover_path: str, message: str, out_path: str) -> None:
+    """Embed a UTF-8 message in the LSBs of a cover image.
+
+    The payload is a 4-byte big-endian length header followed by the
+    encoded message. Output is always written as PNG; lossy formats
+    would destroy the embedded bits.
+
+    Raises:
+        ValueError: if the message exceeds the cover image's capacity.
+    """
 
     msg_bytes = message.encode("utf-8")
     payload = len(msg_bytes).to_bytes(LENGTH_HEADER_BYTES, "big") + msg_bytes
@@ -21,10 +49,9 @@ def embed(cover_path: str, message: str, out_path: str) -> None:
     # Open cover image
     with Image.open(cover_path) as img:
 
-        img.convert("RGB")
+        img = img.convert("RGB")
 
         # Flatten image channels
-        width, height = img.size
         flat = list(chain.from_iterable(img.get_flattened_data()))
 
         capacity_bits = len(flat)   # one bit per channel — width * height * 3
@@ -45,12 +72,22 @@ def embed(cover_path: str, message: str, out_path: str) -> None:
         img.putdata(pixels)
         img.save(out_path, "PNG")
 
-
-
 def extract(image_path: str) -> str:
-    pass
+    """Takes path to image and reads back embedded steganography data
+
+    Reads length from steganography header
+    """
+    with Image.open(image_path) as img:
+        img = img.convert("RGB")
+        flat = list(chain.from_iterable(img.get_flattened_data()))
+        bit_stream = (channel & 1 for channel in flat)
+        length = int.from_bytes(bits_to_bytes(bit_stream, LENGTH_HEADER_BYTES), "big")
+        payload = bits_to_bytes(bit_stream, length)
+        return payload.decode("utf-8")
 
 if __name__ == "__main__":
-    embed("../tests/fixtures/cover.png", "hello world", "../tests/fixtures/out.png")
-    #assert extract("out.png") == "hello world"
+    embed(FIXTURES / "cover.png", "hello world", FIXTURES / "out.png")
+    res = extract(FIXTURES / "out.png")
+    assert res == "hello world"
     print("round-trip ok")
+    print(res)
