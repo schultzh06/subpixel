@@ -30,6 +30,9 @@ def main() -> None:
             print(f"embedded {len(args.message)} chars into {args.output}")
         elif args.command == "decode":
             print(extract(args.image))
+    except FileNotFoundError as e:
+        print(f"error: no such file: {e.filename}", file=sys.stderr)
+        sys.exit(1)
     except SubpixelError as e:
         print(f"error: {e}", file=sys.stderr)
         sys.exit(1)
