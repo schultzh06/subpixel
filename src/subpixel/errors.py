@@ -8,3 +8,6 @@ class MessageTooLargeError(SubpixelError):
 
 class CorruptPayloadError(SubpixelError):
     """Bit stream ended mid-payload, or the header is invalid."""
+
+class DecryptionError(Exception):
+    """Wrong password or corrupted/tampered ciphertext."""

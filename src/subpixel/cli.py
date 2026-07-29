@@ -1,9 +1,11 @@
 import argparse
 from pathlib import Path
 import sys
+from getpass import getpass
 
-from .errors import SubpixelError
+from .errors import SubpixelError, DecryptionError
 from .stego import embed, extract
+from .crypto import encrypt, decrypt
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -26,10 +28,20 @@ def main() -> None:
     args = build_parser().parse_args()
     try:
         if args.command == "encode":
-            embed(args.image, args.message, args.output)
+            password = getpass("Password: ")
+            plaintext = args.message.encode("utf-8")
+            blob = encrypt(plaintext, password)
+            embed(args.image, blob, args.output)
             print(f"embedded {len(args.message)} chars into {args.output}")
         elif args.command == "decode":
-            print(extract(args.image))
+            password = getpass("Password: ")
+            blob = extract(args.image)
+            try:
+                plaintext = decrypt(blob, password)
+            except DecryptionError as e:
+                print(f"error: {e}", file=sys.stderr)
+                sys.exit(1)
+            print(plaintext.decode("utf-8"))
     except FileNotFoundError as e:
         print(f"error: no such file: {e.filename}", file=sys.stderr)
         sys.exit(1)

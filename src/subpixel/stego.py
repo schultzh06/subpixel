@@ -3,6 +3,8 @@ from typing import Iterator
 from itertools import chain
 from pathlib import Path
 
+from .errors import MessageTooLargeError, DecryptionError
+
 FIXTURES = Path(__file__).resolve().parents[1] / "tests" / "fixtures"
 
 LENGTH_HEADER_BYTES = 4 # payload length as 4-byte big-endian int
@@ -32,7 +34,7 @@ def bits_to_bytes(bits: Iterator[int], count: int) -> bytes:
         
 
 
-def embed(cover_path: str, message: str, out_path: str) -> None:
+def embed(cover_path: str, blob: bytes, out_path: str) -> None:
     """Embed a UTF-8 message in the LSBs of a cover image.
 
     The payload is a 4-byte big-endian length header followed by the
@@ -43,8 +45,7 @@ def embed(cover_path: str, message: str, out_path: str) -> None:
         ValueError: if the message exceeds the cover image's capacity.
     """
 
-    msg_bytes = message.encode("utf-8")
-    payload = len(msg_bytes).to_bytes(LENGTH_HEADER_BYTES, "big") + msg_bytes
+    payload = len(blob).to_bytes(LENGTH_HEADER_BYTES, "big") + blob
 
     # Open cover image
     with Image.open(cover_path) as img:
@@ -56,7 +57,7 @@ def embed(cover_path: str, message: str, out_path: str) -> None:
 
         capacity_bits = len(flat)   # one bit per channel — width * height * 3
         if len(payload) * 8 > capacity_bits:
-            raise ValueError("Message too large")
+            raise MessageTooLargeError("Message too large")
 
         # Iterate and embed bits in flat
         bit_iter = bytes_to_bits(payload)
@@ -72,7 +73,7 @@ def embed(cover_path: str, message: str, out_path: str) -> None:
         img.putdata(pixels)
         img.save(out_path, "PNG")
 
-def extract(image_path: str) -> str:
+def extract(image_path: str) -> bytes:
     """Takes path to image and reads back embedded steganography data
 
     Reads length from steganography header
@@ -83,7 +84,7 @@ def extract(image_path: str) -> str:
         bit_stream = (channel & 1 for channel in flat)
         length = int.from_bytes(bits_to_bytes(bit_stream, LENGTH_HEADER_BYTES), "big")
         payload = bits_to_bytes(bit_stream, length)
-        return payload.decode("utf-8")
+        return payload
 
 if __name__ == "__main__":
     embed(FIXTURES / "cover.png", "hello world", FIXTURES / "out.png")
