@@ -59,3 +59,7 @@ so the scheme stays safe for arbitrary binary payloads.
 
     pip install -e ".[dev]"
     pytest -v
+
+---
+
+_Author: Hayden Schultz. This README generated from session notes and codebase architecture by an LLM (Claude), then reviewed and edited by me._
