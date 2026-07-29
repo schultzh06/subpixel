@@ -3,4 +3,4 @@
 from .stego import embed, extract
 
 __all__ = ["embed", "extract"]
-__version__ = "0.1.0"
+__version__ = "1.0.0"

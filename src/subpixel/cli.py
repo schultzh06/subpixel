@@ -6,11 +6,17 @@ from getpass import getpass
 from .errors import SubpixelError, DecryptionError
 from .stego import embed, extract
 from .crypto import encrypt, decrypt
+from subpixel import __version__
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="subpixel",
         description="Hide messages in the least-significant bits of an image.",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"subpixel {__version__}",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
